@@ -116,6 +116,15 @@ header{margin-bottom:16px;display:flex;justify-content:space-between;align-items
 .btn-locate.active{border-color:#185FA5;color:#185FA5}
 .locate-pulse{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:#185FA5;animation:pulse 2s infinite}
 @keyframes pulse{0%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(1.5)}100%{opacity:1;transform:scale(1)}}
+
+.btn-log{border-color:#d4a017;color:#d4a017}.btn-log:hover{background:rgba(212,160,23,0.06)}
+.log-badge{display:inline-block;background:#d4a017;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px}
+.log-modal-list{max-height:400px;overflow-y:auto}
+.log-entry{padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;line-height:1.5}
+.log-entry:last-child{border-bottom:none}
+.log-entry .log-time{color:var(--text-3);font-size:11px}
+.log-entry .log-acct{font-weight:600}
+.log-entry .log-from{color:#c0392b}.log-entry .log-to{color:#1a7a3a}
 #fileInput2,#importSettingsInput{display:none}
 @media(max-width:600px){#map{height:380px}.list-row{grid-template-columns:2fr 1fr 80px;font-size:11px}.mapping-grid{grid-template-columns:1fr}}
 </style>
@@ -128,12 +137,13 @@ header{margin-bottom:16px;display:flex;justify-content:space-between;align-items
 <button class="btn btn-upload" onclick="openUploadModal()">&#8593; Upload data</button>
 
 
+<button class="btn btn-sm btn-log" id="logBtn" onclick="openChangeLog()">Change log</button>
 <button class="btn btn-sm" style="color:#c0392b;border-color:#c0392b" onclick="resetAll()">Reset</button>
 <input type="file" id="importSettingsInput" accept=".json" onchange="importSettings(event)"/>
 </div>
 </header>
 <div class="search-bar" id="searchBar" style="display:none">
-<input type="text" id="searchInput" placeholder="Search by customer, city, or territory..." oninput="doSearch()"/>
+<input type="text" id="searchInput" placeholder="Search by customer, street, city, or territory..." oninput="doSearch()"/>
 <span class="search-count" id="searchCount"></span>
 <button class="search-clear" onclick="clearSearch()">Clear</button>
 </div>
@@ -144,7 +154,7 @@ header{margin-bottom:16px;display:flex;justify-content:space-between;align-items
 <div class="lasso-banner" id="lassoBanner"><span style="font-weight:700;font-size:16px">&#9697;</span><span>Lasso mode: draw around accounts.</span><button class="btn" style="padding:4px 12px;font-size:12px;margin-left:auto" onclick="cancelLasso()">Cancel</button></div>
 <div id="map"></div>
 <div class="view-bar" id="viewBar"></div>
-<div class="legend" id="legendBar"></div>
+<div class="legend" id="legendBar" style="display:none"></div>
 <div class="stats-grid" id="statsGrid"></div>
 <div class="action-row" id="actionRow"></div>
 
@@ -198,6 +208,17 @@ header{margin-bottom:16px;display:flex;justify-content:space-between;align-items
 <div class="modal-btns"><button class="btn" onclick="skipMerge()">Skip — keep all as separate</button><button class="btn btn-primary" onclick="executeMerge()">Merge selected</button></div>
 </div></div>
 
+
+<div class="modal-overlay" id="logModal"><div class="modal modal-sm" style="width:500px">
+<h2>Change log</h2>
+<p style="font-size:12px;color:var(--text-3);margin-bottom:12px" id="logCount"></p>
+<div class="log-modal-list" id="logList"></div>
+<div class="modal-btns" style="justify-content:space-between">
+<button class="btn btn-sm" style="color:#c0392b;border-color:#c0392b" onclick="clearChangeLog()">Clear log</button>
+<button class="btn btn-sm btn-export" onclick="exportChangeLog()">&#8595; Export log</button>
+<button class="btn" onclick="closeChangeLog()">Close</button>
+</div>
+</div></div>
 <script>
 const ZIP_COORDS={23059:[37.666,-77.4461],33781:[27.8428,-82.6996],74134:[36.154,-95.9928],75001:[32.9612,-96.8292],75002:[33.1032,-96.6706],75006:[32.9537,-96.8903],75007:[32.9537,-96.8903],75009:[33.3246,-96.7847],75010:[32.9537,-96.8903],75013:[33.1032,-96.6706],75019:[32.9546,-97.015],75020:[33.7557,-96.5366],75022:[33.0146,-97.0969],75023:[33.0198,-96.6989],75024:[33.0198,-96.6989],75025:[33.0198,-96.6989],75028:[33.0146,-97.0969],75032:[32.9312,-96.4598],75033:[33.1507,-96.8236],75034:[33.1507,-96.8236],75035:[33.1507,-96.8236],75036:[33.1507,-96.8236],75038:[32.814,-96.949],75039:[32.814,-96.949],75040:[32.9126,-96.6389],75041:[32.9126,-96.6389],75042:[32.9126,-96.6389],75043:[32.9126,-96.6389],75044:[32.9126,-96.6389],75048:[32.9762,-96.5953],75050:[32.746,-96.9978],75051:[32.746,-96.9978],75052:[32.746,-96.9978],75056:[33.089,-96.8864],75057:[33.0462,-96.9942],75058:[33.4479,-96.7475],75060:[32.814,-96.949],75061:[32.814,-96.949],75062:[32.814,-96.949],75063:[32.814,-96.949],75065:[33.1,-97.04],75067:[33.0462,-96.9942],75068:[33.163,-96.937],75069:[33.1972,-96.6397],75070:[33.1972,-96.6397],75071:[33.1972,-96.6397],75072:[33.1972,-96.6397],75074:[33.0198,-96.6989],75075:[33.0198,-96.6989],75076:[33.7596,-96.6714],75077:[33.0919,-97.0464],75078:[33.236,-96.801],75080:[32.9482,-96.7297],75081:[32.9482,-96.7297],75082:[32.9482,-96.7297],75087:[32.9312,-96.4598],75088:[32.9029,-96.5639],75089:[32.9029,-96.5639],75090:[33.636,-96.609],75092:[33.636,-96.609],75093:[33.0198,-96.6989],75094:[33.0151,-96.613],75098:[33.0151,-96.5389],75103:[32.5565,-95.8633],75104:[32.588,-96.956],75110:[32.0954,-96.4689],75114:[32.6279,-96.4556],75115:[32.5896,-96.8568],75116:[32.6518,-96.9085],75119:[32.3293,-96.6253],75125:[32.534,-96.6692],75126:[32.7479,-96.4722],75135:[32.994,-96.2278],75137:[32.6518,-96.9085],75142:[32.5889,-96.3089],75143:[32.4379,-96.2303],75146:[32.5921,-96.7561],75147:[32.3665,-96.1003],75149:[32.7668,-96.5992],75150:[32.7668,-96.5992],75154:[32.5176,-96.8045],75156:[32.3335,-96.1186],75159:[32.6396,-96.5381],75160:[32.736,-96.275],75165:[32.3865,-96.8484],75166:[33.0268,-96.4342],75169:[32.7085,-96.0081],75180:[32.7216,-96.6225],75182:[32.7966,-96.5608],75189:[32.9751,-96.3325],75201:[32.7767,-96.797],75202:[32.7767,-96.797],75204:[32.7767,-96.797],75205:[32.7767,-96.797],75206:[32.7767,-96.797],75208:[32.7767,-96.797],75209:[32.7767,-96.797],75210:[32.7767,-96.797],75211:[32.7767,-96.797],75212:[32.7767,-96.797],75214:[32.7767,-96.797],75215:[32.7767,-96.797],75216:[32.7767,-96.797],75217:[32.7767,-96.797],75218:[32.7767,-96.797],75219:[32.7767,-96.797],75220:[32.7767,-96.797],75223:[32.7767,-96.797],75224:[32.7767,-96.797],75225:[32.7767,-96.797],75226:[32.7767,-96.797],75227:[32.7767,-96.797],75228:[32.7767,-96.797],75229:[32.7767,-96.797],75230:[32.7767,-96.797],75231:[32.7767,-96.797],75233:[32.7767,-96.797],75234:[32.7767,-96.797],75235:[32.7767,-96.797],75237:[32.7767,-96.797],75238:[32.7767,-96.797],75240:[32.7767,-96.797],75241:[32.7767,-96.797],75243:[32.7767,-96.797],75244:[32.7767,-96.797],75246:[32.7767,-96.797],75247:[32.7767,-96.797],75248:[32.7767,-96.797],75249:[32.7767,-96.797],75251:[32.7767,-96.797],75252:[32.7767,-96.797],75254:[32.7767,-96.797],75287:[32.7767,-96.797],75401:[33.1384,-96.1108],75402:[33.1384,-96.1108],75407:[33.179,-96.4981],75409:[33.349,-96.5486],75418:[33.5773,-96.1783],75428:[33.2468,-95.9],75440:[32.874,-95.7653],75442:[33.1637,-96.3597],75454:[33.286,-96.5728],75455:[33.1568,-94.968],75459:[33.5073,-96.6128],75460:[33.6609,-95.5555],75462:[33.6609,-95.5555],75474:[32.9101,-96.1353],75482:[33.1385,-95.6008],75491:[33.5126,-96.3928],75495:[33.4215,-96.5775],75701:[32.3513,-95.3011],75766:[31.9635,-95.2705],75789:[32.1546,-95.1197],75801:[31.7621,-95.6308],76001:[32.7357,-97.1081],76002:[32.7357,-97.1081],76006:[32.7357,-97.1081],76008:[32.696,-97.6022],76010:[32.7357,-97.1081],76011:[32.7357,-97.1081],76012:[32.7357,-97.1081],76013:[32.7357,-97.1081],76014:[32.7357,-97.1081],76015:[32.7357,-97.1081],76016:[32.7357,-97.1081],76017:[32.7357,-97.1081],76018:[32.7357,-97.1081],76020:[32.8951,-97.5455],76021:[32.844,-97.135],76023:[33.079,-97.565],76028:[32.5421,-97.3208],76031:[32.3476,-97.3869],76033:[32.3476,-97.3869],76034:[32.8807,-97.15],76036:[32.579,-97.3628],76039:[32.8371,-97.0817],76040:[32.8371,-97.0817],76043:[32.2346,-97.7553],76044:[32.4493,-97.5269],76048:[32.4419,-97.7942],76049:[32.4419,-97.7942],76050:[32.2701,-97.1792],76051:[32.9343,-97.0781],76052:[32.9743,-97.3478],76053:[32.8234,-97.1706],76054:[32.8234,-97.1706],76063:[32.5632,-97.1417],76065:[32.4824,-96.9945],76066:[32.7499,-98.0106],76067:[32.8085,-98.1128],76082:[32.9662,-97.6836],76086:[32.7593,-97.7972],76087:[32.7618,-97.9032],76092:[32.9412,-97.134],76102:[32.7555,-97.3308],76103:[32.7555,-97.3308],76104:[32.7555,-97.3308],76105:[32.7555,-97.3308],76106:[32.7555,-97.3308],76107:[32.7555,-97.3308],76108:[32.7555,-97.3308],76109:[32.7555,-97.3308],76110:[32.7555,-97.3308],76111:[32.7555,-97.3308],76112:[32.7555,-97.3308],76114:[32.7774,-97.3947],76115:[32.7555,-97.3308],76116:[32.7555,-97.3308],76117:[32.7996,-97.2692],76119:[32.7555,-97.3308],76120:[32.7555,-97.3308],76123:[32.7555,-97.3308],76126:[32.6735,-97.4603],76131:[32.8601,-97.3639],76132:[32.7555,-97.3308],76133:[32.7555,-97.3308],76134:[32.7555,-97.3308],76135:[32.796,-97.45],76137:[32.7996,-97.2692],76140:[32.7555,-97.3308],76148:[32.7555,-97.3308],76155:[32.7555,-97.3308],76164:[32.7555,-97.3308],76177:[32.7555,-97.3308],76179:[32.8601,-97.3639],76180:[32.8343,-97.2289],76182:[32.8343,-97.2289],76201:[33.2148,-97.1331],76203:[33.2148,-97.1331],76205:[33.2148,-97.1331],76207:[33.2148,-97.1331],76208:[33.2148,-97.1331],76209:[33.2148,-97.1331],76210:[33.2148,-97.1331],76226:[33.1082,-97.1656],76227:[33.304,-96.9861],76230:[33.5615,-97.8489],76234:[33.2343,-97.5861],76240:[33.626,-97.1336],76241:[33.626,-97.1336],76244:[32.7555,-97.3308],76247:[33.0846,-97.2961],76248:[32.9346,-97.2517],76249:[33.2618,-97.2378],76252:[33.6518,-97.3764],76255:[33.7868,-97.7261],76262:[32.9915,-97.196],76266:[33.36,-97.174],76273:[33.6568,-96.907],76301:[33.9137,-98.4934],76302:[33.9137,-98.4934],76306:[33.9137,-98.4934],76308:[33.9137,-98.4934],76309:[33.9137,-98.4934],76310:[33.9137,-98.4934],76311:[33.9886,-98.5112],76354:[34.0981,-98.5706],76380:[33.5943,-99.2603],76384:[34.1545,-99.2653],76401:[32.2207,-98.2023],76426:[33.2101,-97.7547],76430:[32.7235,-99.2978],76437:[32.3882,-98.9793],76448:[32.4015,-98.8176],76450:[33.1068,-98.5895],76487:[32.9754,-97.8681],76645:[32.011,-97.13],76701:[31.5493,-97.1467],76711:[31.5493,-97.1467],76834:[31.8277,-99.4265],76844:[31.4499,-98.5712],76878:[31.7416,-99.3215],76901:[31.4638,-100.437],76903:[31.4638,-100.437],76904:[31.4638,-100.437],77095:[29.7604,-95.3698],77584:[29.5636,-95.2861],77833:[30.1669,-96.3977],79005:[36.4528,-100.5373],79007:[35.667,-101.3971],79010:[35.5334,-102.3655],79014:[35.9128,-100.3818],79015:[34.9803,-101.9188],79022:[36.0595,-102.5132],79027:[34.5517,-102.3118],79029:[35.8628,-101.9732],79036:[35.6395,-101.6035],79043:[34.3853,-102.114],79045:[34.8152,-102.3977],79065:[35.5364,-100.9595],79070:[36.4003,-100.8026],79072:[34.1848,-101.7068],79081:[36.1981,-101.1918],79088:[34.5348,-101.7582],79101:[35.222,-101.8313],79102:[35.222,-101.8313],79106:[35.222,-101.8313],79107:[35.222,-101.8313],79109:[35.222,-101.8313],79118:[35.222,-101.8313],79119:[35.222,-101.8313],79121:[35.222,-101.8313],79124:[35.222,-101.8313],79201:[34.4265,-100.204],79226:[34.9387,-100.8882],79235:[33.9845,-101.3373],79252:[34.2976,-99.7404],79316:[33.1684,-102.2691],79323:[32.9646,-102.8293],79325:[34.3834,-103.0382],79331:[32.7376,-101.9501],79336:[33.5873,-102.378],79339:[33.9173,-102.3249],79347:[34.2267,-102.7238],79356:[33.191,-101.3779],79360:[32.7188,-102.6449],79373:[33.1674,-101.7936],79401:[33.5779,-101.8552],79403:[33.5779,-101.8552],79407:[33.5779,-101.8552],79410:[33.5779,-101.8552],79412:[33.5779,-101.8552],79413:[33.5779,-101.8552],79414:[33.5779,-101.8552],79415:[33.5779,-101.8552],79416:[33.5779,-101.8552],79423:[33.5779,-101.8552],79424:[33.5779,-101.8552],79549:[32.7179,-100.9177],79556:[32.471,-100.4059],79601:[32.4487,-99.7331],79602:[32.4487,-99.7331],79603:[32.4487,-99.7331],79605:[32.4487,-99.7331],79606:[32.4487,-99.7331],79607:[32.4208,-99.8546],79701:[31.9973,-102.0779],79703:[31.9973,-102.0779],79705:[31.9973,-102.0779],79707:[31.9973,-102.0779],79714:[32.3187,-102.5455],79720:[32.2504,-101.4785],79721:[32.2504,-101.4785],79735:[30.8941,-102.8793],79756:[31.5943,-102.8927],79761:[31.8457,-102.3676],79762:[31.8457,-102.3676],79765:[31.8457,-102.3676],79772:[31.4229,-103.4932],79782:[32.129,-101.7882],85086:[33.4484,-112.074],93301:[35.222,-101.8313]};
 const PALETTE=['#185FA5','#D85A30','#1a7a3a','#8e44ad','#c0392b','#2c3e50','#d4a017','#16a085','#e84393','#6c5ce7','#e17055','#00b894','#fdcb6e','#636e72','#0984e3','#d63031'];
@@ -320,7 +341,7 @@ function assignAcct(lk,tId){
   const acctName=d?d.customer:lk;
   const msg=tId?'Assign "'+acctName+'" to '+newName+'?\n\n(Currently: '+currentName+')':'Remove "'+acctName+'" from '+currentName+'?';
   if(!confirm(msg))return;
-  if(tId===null)delete assignments[lk];else assignments[lk]=tId;
+  const prevTId=assignments[lk]||null;if(tId===null)delete assignments[lk];else assignments[lk]=tId;logChange(lk,prevTId,tId);
   saveState();updateAll();
 }window.assignAcct=assignAcct;
 
@@ -378,7 +399,7 @@ let searchTerm='';
 function doSearch(){searchTerm=document.getElementById('searchInput').value.toLowerCase().trim();renderLists();highlightSearchOnMap();}window.doSearch=doSearch;
 function clearSearch(){document.getElementById('searchInput').value='';searchTerm='';renderLists();highlightSearchOnMap();}window.clearSearch=clearSearch;
 
-function matchesSearch(d){if(!searchTerm)return true;return d.customer.toLowerCase().includes(searchTerm)||d.city.toLowerCase().includes(searchTerm)||(d.empResp&&d.empResp.toLowerCase().includes(searchTerm))||(function(){const t=getTerritory(assignments[acctKey(d)]);return t&&t.name.toLowerCase().includes(searchTerm);}());}
+function matchesSearch(d){if(!searchTerm)return true;return d.customer.toLowerCase().includes(searchTerm)||d.city.toLowerCase().includes(searchTerm)||d.address.toLowerCase().includes(searchTerm)||(d.empResp&&d.empResp.toLowerCase().includes(searchTerm))||(function(){const t=getTerritory(assignments[acctKey(d)]);return t&&t.name.toLowerCase().includes(searchTerm);}());}
 
 function highlightSearchOnMap(){
   if(!searchTerm){mapMarkers.forEach(m=>{const op=mOp(m.data);m.marker.setStyle({fillOpacity:op,opacity:op});});return;}
@@ -393,7 +414,7 @@ if(overlayData.length&&showOverlay){ot.style.display='';ol.style.display='';rend
 // Update search count
 if(searchTerm){const total=allData().filter(d=>matchesSearch(d)).length;document.getElementById('searchCount').textContent=total+' match'+(total!==1?'es':'');} else{document.getElementById('searchCount').textContent='';}}
 
-function renderList(data,el){let h='<div class="list-row list-header"><span>Customer</span><span>City</span><span>Zip</span><span>FYTD</span><span>Territory</span></div>';
+function renderList(data,el){let h='<div class="list-row list-header"><span>Customer</span><span>City</span><span>Zip</span><span>FYTD</span><span style="display:flex;justify-content:space-between;align-items:center">Territory<button class="btn btn-sm btn-export" style="padding:2px 8px;font-size:10px" onclick="exportFiltered()">Export</button></span></div>';
 let flt=[...data];
 if(searchTerm)flt=flt.filter(d=>matchesSearch(d));
 if(viewSelected.size>0)flt=flt.filter(d=>{const tId=assignments[acctKey(d)];return tId?viewSelected.has(tId):viewSelected.has('_u');});
@@ -782,6 +803,72 @@ function updateLocateBtn(){
   else{btn.className='btn btn-sm btn-locate';btn.innerHTML='\u25CE My location';}
 }
 
+
+// Change log
+let changeLog=[];
+function loadChangeLog(){try{const r=localStorage.getItem(SK+'_log');if(r)changeLog=JSON.parse(r);}catch(e){}}
+function saveChangeLog(){try{localStorage.setItem(SK+'_log',JSON.stringify(changeLog));}catch(e){}}
+function logChange(lk,fromTId,toTId){
+  const ad=allData();const d=ad.find(x=>acctKey(x)===lk);
+  const fromT=getTerritory(fromTId);const toT=getTerritory(toTId);
+  changeLog.unshift({
+    time:new Date().toLocaleString(),
+    acct:d?d.customer:lk,
+    acctNum:d?d.acctNum:'',
+    legacyKey:d?d.legacyKey:'',
+    custId:d?d.custId:'',
+    billingAccts:d&&d.billingAccts?d.billingAccts.join(', '):'',
+    address:d?(d.address+', '+d.city+' '+d.zip):'',
+    from:fromT?terrDisplayName(fromT.name):'Unassigned',
+    to:toT?terrDisplayName(toT.name):'Unassigned'
+  });
+  saveChangeLog();updateLogBadge();
+}
+function updateLogBadge(){
+  const btn=document.getElementById('logBtn');
+  if(!btn)return;
+  if(changeLog.length>0)btn.innerHTML='Change log <span class="log-badge">'+changeLog.length+'</span>';
+  else btn.innerHTML='Change log';
+}
+function openChangeLog(){
+  const el=document.getElementById('logList');
+  const ct=document.getElementById('logCount');
+  ct.textContent=changeLog.length+' change'+(changeLog.length!==1?'s':'');
+  if(changeLog.length===0){el.innerHTML='<div style="padding:30px;text-align:center;color:var(--text-3)">No changes recorded yet</div>';}
+  else{let h='';changeLog.forEach(e=>{
+    h+='<div class="log-entry"><span class="log-time">'+e.time+'</span><br><span class="log-acct">'+e.acct+'</span>'+(e.acctNum?' ('+e.acctNum+')':'')+'<br><span class="log-from">'+e.from+'</span> \u2192 <span class="log-to">'+e.to+'</span></div>';
+  });el.innerHTML=h;}
+  document.getElementById('logModal').classList.add('show');
+}window.openChangeLog=openChangeLog;
+function closeChangeLog(){document.getElementById('logModal').classList.remove('show');}window.closeChangeLog=closeChangeLog;
+function clearChangeLog(){if(!confirm('Clear all change history?'))return;changeLog=[];saveChangeLog();updateLogBadge();openChangeLog();}window.clearChangeLog=clearChangeLog;
+function exportChangeLog(){
+  if(changeLog.length===0){alert('No changes to export.');return;}
+  const header=['Date/Time','Customer','Account #','Legacy Key','Customer ID','Billing Account(s)','Address','From Territory','To Territory'];
+  const rows=[header];changeLog.forEach(e=>{rows.push([e.time,e.acct,e.acctNum||'',e.legacyKey||'',e.custId||'',e.billingAccts||'',e.address||'',e.from,e.to]);});
+  const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:20},{wch:30},{wch:14},{wch:14},{wch:14},{wch:20},{wch:40},{wch:20},{wch:20}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Change Log');
+  XLSX.writeFile(wb,'Territory_Change_Log.xlsx');
+}window.exportChangeLog=exportChangeLog;
+
+loadChangeLog();
+
+function exportFiltered(){
+  const ad=allData();
+  let flt=[...ad];
+  if(searchTerm)flt=flt.filter(d=>matchesSearch(d));
+  if(viewSelected.size>0)flt=flt.filter(d=>{const tId=assignments[acctKey(d)];return tId?viewSelected.has(tId):viewSelected.has('_u');});
+  if(flt.length===0){alert('No accounts to export.');return;}
+  flt.sort((a,b)=>b.totalSales-a.totalSales);
+  const hasLK=flt.some(d=>d.legacyKey);const hasBI=flt.some(d=>d.billingAccts&&d.billingAccts.length);const hasSales=flt.some(d=>d.totalSales);const hasPhone=flt.some(d=>d.phone);const hasEmpR=flt.some(d=>d.empResp);
+  const header=['Account Number'];if(hasLK)header.push('Legacy Key');if(hasBI)header.push('Account #2');header.push('Customer','Address','City','Zip Code');if(hasSales)header.push('FYTD Sales');if(hasPhone)header.push('Phone');if(hasEmpR)header.push('Employee Responsible');header.push('Territory');
+  const rows=[header];
+  flt.forEach(d=>{const t=getTerritory(assignments[acctKey(d)]);
+    const row=[d.acctNum||d.custId||''];if(hasLK)row.push(d.legacyKey||'');if(hasBI)row.push(d.billingAccts[0]||'');row.push(d.customer,d.address,d.city,d.zip);if(hasSales)row.push(d.totalSales);if(hasPhone)row.push(d.phone||'');if(hasEmpR)row.push(d.empResp||'');row.push(t?terrDisplayName(t.name):'Unassigned');rows.push(row);});
+  const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=header.map(h=>({wch:Math.max(h.length+4,14)}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Filtered Accounts');
+  XLSX.writeFile(wb,'Filtered_Accounts.xlsx');
+}window.exportFiltered=exportFiltered;
 loadState();masterData.forEach(d=>{d._layer='master';});overlayData.forEach(d=>{d._layer='overlay';});rebuildMarkers();fitMapToData();updateAll();
 
 function resetAll(){if(!confirm('This will restore all defaults. Are you sure?'))return;masterData=JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));masterData.forEach(d=>{d._layer='master';});overlayData=[];territories=JSON.parse(JSON.stringify(DEFAULT_TERRITORIES));assignments=JSON.parse(JSON.stringify(DEFAULT_ASSIGNMENTS));nextTId=DEFAULT_NEXT_TID;mode=null;overlaySaved=false;try{localStorage.removeItem(SK);}catch(e){}rebuildMarkers();updateAll();}window.resetAll=resetAll;
